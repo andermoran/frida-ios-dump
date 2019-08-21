@@ -33,6 +33,8 @@ User = 'root'
 Password = 'alpine'
 Host = 'localhost'
 Port = 2222
+output_path = os.getcwd()
+binary_only_mode = False
 
 TEMP_DIR = tempfile.gettempdir()
 PAYLOAD_DIR = 'Payload'
@@ -40,7 +42,6 @@ PAYLOAD_PATH = os.path.join(TEMP_DIR, PAYLOAD_DIR)
 file_dict = {}
 
 finished = threading.Event()
-
 
 def get_usb_iphone():
     Type = 'usb'
@@ -83,7 +84,7 @@ def generate_ipa(path, display_name):
                 shutil.move(from_dir, to_dir)
 
         target_dir = './' + PAYLOAD_DIR
-        zip_args = ('zip', '-qr', os.path.join(os.getcwd(), ipa_filename), target_dir)
+        zip_args = ('zip', '-qr', os.path.join(output_path, ipa_filename), target_dir)
         subprocess.check_call(zip_args, cwd=TEMP_DIR)
         shutil.rmtree(PAYLOAD_PATH)
         print
@@ -122,10 +123,27 @@ def on_message(message, data):
 
             index = origin_path.find('.app/')
             file_dict[os.path.basename(dump_path)] = origin_path[index + 5:]
+        
+        if 'decrypted_binary' in payload:
+            decrypted_binary_name = payload['decrypted_binary'] # executable name
+            decrypted_binary_path_ios = payload['path'] # path on iOS device
+            
+            scp_from = decrypted_binary_path_ios
+            scp_to = output_path
+            with SCPClient(ssh.get_transport(), progress = progress, socket_timeout = 60) as scp:
+                scp.get(scp_from, scp_to, recursive=False)
+            
+            
+            decrypted_binary_path_local = os.path.join(output_path, decrypted_binary_name) # path on your machine
+            chmod_args = ('chmod', '755', decrypted_binary_path_local)
+            try:
+                subprocess.check_call(chmod_args)
+            except subprocess.CalledProcessError as err:
+                print err
 
         if 'app' in payload:
             app_path = payload['app']
-
+            
             scp_from = app_path
             scp_to = PAYLOAD_PATH + u'/'
             with SCPClient(ssh.get_transport(), progress = progress, socket_timeout = 60) as scp:
@@ -142,6 +160,7 @@ def on_message(message, data):
 
         if 'done' in payload:
             finished.set()
+            
     t.close()
 
 def compare_applications(a, b):
@@ -275,10 +294,13 @@ def start_dump(session, ipa_name):
     print 'Dumping {} to {}'.format(display_name, TEMP_DIR)
 
     script = load_js_file(session, DUMP_JS)
+    if binary_only_mode:
+        script.post('setBinaryMode')
     script.post('dump')
     finished.wait()
-
-    generate_ipa(PAYLOAD_PATH, ipa_name)
+    
+    if not binary_only_mode:
+        generate_ipa(PAYLOAD_PATH, ipa_name)
 
     if session:
         session.detach()
@@ -288,6 +310,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='frida-ios-dump (by AloneMonkey v2.0)')
     parser.add_argument('-l', '--list', dest='list_applications', action='store_true', help='List the installed apps')
     parser.add_argument('-o', '--output', dest='output_ipa', help='Specify name of the decrypted IPA')
+    parser.add_argument('-n', '--output-path', dest='output_path', help='Where we are dumping the decrypted binary')
+    parser.add_argument('-u', '--user', dest='user', help='The user of the iOS device')
+    parser.add_argument('-pass', '--password', dest='password', help='The root password of the iOS device')
+    parser.add_argument('-p', '--port', dest='port', help='Port number')
+    parser.add_argument('-host', '--host', dest='host', help='Host')
+    parser.add_argument('-b', action='store_true', help='Use this flag if you only want the decrypted binary')
     parser.add_argument('target', nargs='?', help='Bundle identifier or display name of the target app')
     args = parser.parse_args()
 
@@ -302,6 +330,19 @@ if __name__ == '__main__':
     else:
         name_or_bundleid = args.target
         output_ipa = args.output_ipa
+        
+        if args.b:
+            binary_only_mode = True
+        if args.user != None:
+            User = args.user
+        if args.password != None:
+            Password = args.password
+        if args.host != None:
+            Host = args.host
+        if args.port != None:
+            Port = args.port
+        if args.output_path != None:
+            output_path = args.output_path
 
         try:
             ssh = paramiko.SSHClient()

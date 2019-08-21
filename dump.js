@@ -1,5 +1,4 @@
 Module.ensureInitialized('Foundation');
-
 var O_RDONLY = 0;
 var O_WRONLY = 1;
 var O_RDWR = 2;
@@ -8,6 +7,10 @@ var O_CREAT = 512;
 var SEEK_SET = 0;
 var SEEK_CUR = 1;
 var SEEK_END = 2;
+
+var BINARY_ONLY = false;
+var decrypted_binary_path;
+var decrypted_binary_name;
 
 function allocStr(str) {
     return Memory.allocUtf8String(str);
@@ -158,6 +161,9 @@ function getAllAppModules() {
     modules = new Array();
     var tmpmods = Process.enumerateModulesSync();
     for (var i = 0; i < tmpmods.length; i++) {
+        if (BINARY_ONLY && modules.length == 1) {
+            return modules;
+        }
         if (tmpmods[i].path.indexOf(".app") != -1) {
             modules.push(tmpmods[i]);
         }
@@ -209,7 +215,14 @@ function dumpModule(name) {
     var modbase = modules[i].base;
     var modsize = modules[i].size;
     var newmodname = modules[i].name;
-    var newmodpath = getDocumentDir() + "/" + newmodname + ".fid";
+    var newmodpath;
+    if (BINARY_ONLY) {
+        newmodpath = getDocumentDir() + "/" + newmodname;
+        decrypted_binary_name = newmodname;
+        decrypted_binary_path = newmodpath;
+    } else {
+        newmodpath = getDocumentDir() + "/" + newmodname + ".fid";
+    }
     var oldmodpath = modules[i].path;
 
 
@@ -238,6 +251,7 @@ function dumpModule(name) {
         size_of_mach_header = 32;
     }
 
+    var BUFSIZE = 4096;
     var BUFSIZE = 4096;
     var buffer = malloc(BUFSIZE);
 
@@ -371,18 +385,27 @@ function loadAllDynamicLibrary(app_path) {
 }
 
 function handleMessage(message) {
-    modules = getAllAppModules();
-    var app_path = ObjC.classes.NSBundle.mainBundle().bundlePath();
-    loadAllDynamicLibrary(app_path);
-    // start dump
-    modules = getAllAppModules();
-    for (var i = 0; i  < modules.length; i++) {
-        console.log("start dump " + modules[i].path);
-        var result = dumpModule(modules[i].path);
-        send({ dump: result, path: modules[i].path});
+    if (message == "setBinaryMode") {
+        BINARY_ONLY = true;
+    } else if (message == "dump") {
+        modules = getAllAppModules();
+        var app_path = ObjC.classes.NSBundle.mainBundle().bundlePath();
+        if (!BINARY_ONLY) {
+            loadAllDynamicLibrary(app_path);
+        }
+        // start dump
+        modules = getAllAppModules();
+        for (var i = 0; i  < modules.length; i++) {
+            var result = dumpModule(modules[i].path);
+            send({dump: result, path: modules[i].path});
+        }
+        if (BINARY_ONLY) {
+            send({decrypted_binary: decrypted_binary_name, path: decrypted_binary_path});
+        } else {
+            send({app: app_path.toString()});
+        }
+        send({done: "ok"});
     }
-    send({app: app_path.toString()});
-    send({done: "ok"});
     recv(handleMessage);
 }
 
