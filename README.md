@@ -21,7 +21,7 @@ Pull a decrypted IPA from a jailbroken device. Many times in iOS reverse enginee
      * If no flag is provided, the port will be `2222`
    * `-host` or `--host` the host used for SSH/SCP
       * If no flag is provided, the user will be `localhost`
-   * Example: `./dump.py Aftenposten -b --user root --password alpine --host localhost --port 2222 --output-path ~/Downloads`
+   * Example: `./dump.py Aftenposten -b --user root --password alpine --host localhost --port 2222 --output-path /Users/johndoe/Downloads`
 
 For SSH/SCP make sure you have your public key added to the target device's ~/.ssh/authorized_keys file.
 
