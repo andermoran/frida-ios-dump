@@ -1,7 +1,7 @@
 **python 3 please checkout 3.x branch**
 
 # frida-ios-dump
-Pull a decrypted IPA from a jailbroken device. Many times in iOS reverse engineering, we only need the decrypted binary, so why dump the entire decrypted .ipa? The primary feature of this fork is that we have the option to only get the decrypted binary instead of the whole decrypted .ipa. 
+Pull a decrypted IPA from a jailbroken device. Many times in iOS reverse engineering, we only need the decrypted binary, so why dump the entire decrypted .ipa? The primary feature of this fork is that we have the option to only get the decrypted binary instead of the whole decrypted .ipa. Also, do not modify dump.py to put your password in like you do on the master branch of frida-ios-dump, simply pass your password in through the command line with the `-pass` flag.
 
 ## Usage
 
