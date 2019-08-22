@@ -1,7 +1,7 @@
 **python 3 please checkout 3.x branch**
 
 # frida-ios-dump
-Pull a decrypted IPA from a jailbroken device
+Pull a decrypted IPA from a jailbroken device. Many times in iOS reverse engineering, we only need the decrypted binary, so why dump the entire decrypted .ipa? The primary feature of this fork is that we have the option to only get the decrypted binary instead of the whole decrypted .ipa. 
 
 ## Usage
 
@@ -12,10 +12,15 @@ Pull a decrypted IPA from a jailbroken device
  5. There are also other flags to specify the preferred file returned, user, password, port, host, and output path
    * `-b` if you only want the decrypted binary, do not use this flag if you want the entire decrypted .ipa
    * `-n` or `--output-path` where we are dumping the decrypted .ipa or binary
+     * If no flag is provided, the output path will be the current working directory
    * `-u` or `--user` the user used for SSH/SCP
+     * If no flag is provided, the user will be `root`
    * `-pass` or `--password` the password used for SSH/SCP
+     * If no flag is provided, the password will be `alpine`
    * `-p` or `--port` the port used for SSH/SCP
+     * If no flag is provided, the port will be `2222`
    * `-host` or `--host` the host used for SSH/SCP
+      * If no flag is provided, the user will be `localhost`
    * Example: `./dump.py Aftenposten -b --user root --password alpine --host localhost --port 2222 --output-path ~/Downloads`
 
 For SSH/SCP make sure you have your public key added to the target device's ~/.ssh/authorized_keys file.
