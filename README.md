@@ -9,6 +9,7 @@ Pull a decrypted IPA from a jailbroken device
  2. `sudo pip install -r requirements.txt --upgrade` (Python 2.7)
  3. Run usbmuxd/iproxy SSH forwarding over USB (Default 2222 -> 22). e.g. `iproxy 2222 22`
  4. Run ./dump.py `Display name` or `Bundle identifier`
+ 5. Use -b with dump.py if you only want the decrypted binary
 
 For SSH/SCP make sure you have your public key added to the target device's ~/.ssh/authorized_keys file.
 
